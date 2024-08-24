@@ -52,7 +52,7 @@ pipeline {
             steps {
                 script {
                     def pom = readMavenPom file: 'pom.xml'
-                    def nexusUrl = 'http://nexus:8081'
+                    def nexusUrl = 'nexus:8081'
                     def artifactPath = "target/${pom.artifactId}-${pom.version}.jar"
                     
                     nexusArtifactUploader(
