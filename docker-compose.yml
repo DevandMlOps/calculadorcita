@@ -5,35 +5,56 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
-      - "50001:50000"
+      - "50000:50000"
     container_name: jenkins
     volumes:
       - jenkins_home:/var/jenkins_home
       - /usr/share/maven:/usr/share/maven
+      - maven_cache:/root/.m2
     environment:
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
       M2_HOME: /usr/share/maven
+      NEXUS_USER: admin
+      NEXUS_PASSWORD: admin123
+      NEXUS_URL: http://nexus:8081
     networks:
       - net
+    restart: unless-stopped
 
   sonarqube:
     image: sonarqube:latest
     container_name: sonarqube
     ports:
       - "9000:9000"
-    networks:
-      - net
     volumes:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - net
+    restart: unless-stopped
 
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: nexus
+    ports:
+      - "8081:8081"
+    volumes:
+      - nexus-data:/nexus-data
+    environment:
+      - NEXUS_SECURITY_RANDOMPASSWORD=false
+      - NEXUS_SECURITY_ADMINPASSWORD=admin123
+    networks:
+      - net
+    restart: unless-stopped
 
 volumes:
   jenkins_home:
   sonarqube_data:
   sonarqube_extensions:
   sonarqube_logs:
+  nexus-data:
+  maven_cache:
 
 networks:
   net:
