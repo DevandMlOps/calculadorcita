@@ -6,12 +6,6 @@ pipeline {
     }
 
     environment {
-        COLOR_MAP = [
-            'SUCCESS': 'good',
-            'FAILURE': 'danger',
-            'UNSTABLE': 'warning',
-            'ABORTED': 'warning'
-        ]
         SLACK_CHANNEL = '#appdevops'
         SONARQUBE_URL = 'http://sonarqube:9000'
         NEXUS_URL = 'nexus:8081'
@@ -89,14 +83,22 @@ pipeline {
 
     post {
         always {
-            echo 'Slack Notification'
-            slackSend channel: env.SLACK_CHANNEL,
-                      color: COLOR_MAP[currentBuild.currentResult],
-                      message: """*${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*
-                                 Branch: ${env.GIT_BRANCH}
-                                 Commit: ${env.GIT_COMMIT}
-                                 Author: ${env.GIT_AUTHOR_NAME}
-                                 More Info at: ${env.BUILD_URL}"""
+            script {
+                def COLOR_MAP = [
+                    'SUCCESS': 'good',
+                    'FAILURE': 'danger',
+                    'UNSTABLE': 'warning',
+                    'ABORTED': 'warning'
+                ]
+                echo 'Slack Notification'
+                slackSend channel: env.SLACK_CHANNEL,
+                          color: COLOR_MAP[currentBuild.currentResult],
+                          message: """*${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*
+                                     Branch: ${env.GIT_BRANCH}
+                                     Commit: ${env.GIT_COMMIT}
+                                     Author: ${env.GIT_AUTHOR_NAME}
+                                     More Info at: ${env.BUILD_URL}"""
+            }
         }
     }
 }
