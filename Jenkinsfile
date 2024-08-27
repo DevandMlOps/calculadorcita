@@ -15,7 +15,13 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/DevandMlOps/calculadorcita'
+                script {
+                    git branch: 'main', url: 'https://github.com/DevandMlOps/calculadorcita'
+                    env.GIT_AUTHOR_NAME = sh(
+                        script: "git log -1 --pretty=format:'%an'",
+                        returnStdout: true
+                    ).trim()
+                }
             }
         }
 
