@@ -5,6 +5,19 @@ pipeline {
         maven 'maven3'
     }
 
+    environment {
+        COLOR_MAP = [
+            'SUCCESS': 'good',
+            'FAILURE': 'danger',
+            'UNSTABLE': 'warning',
+            'ABORTED': 'warning'
+        ]
+        SLACK_CHANNEL = '#appdevops'
+        SONARQUBE_URL = 'http://sonarqube:9000'
+        NEXUS_URL = 'nexus:8081'
+        NEXUS_CREDENTIALS_ID = 'nexus-credentials'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -27,15 +40,15 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonarqube') {
-                    sh '''
+                    sh """
                         mvn sonar:sonar \
                           -Dsonar.projectKey=calculadorcita \
                           -Dsonar.projectName='calculadorcita' \
                           -Dsonar.projectVersion=1.0 \
                           -Dsonar.sources=src/main/java/ \
                           -Dsonar.java.binaries=target/classes \
-                          -Dsonar.host.url=http://sonarqube:9000
-                    '''
+                          -Dsonar.host.url=${env.SONARQUBE_URL}
+                    """
                 }
             }
         }
@@ -52,17 +65,16 @@ pipeline {
             steps {
                 script {
                     def pom = readMavenPom file: 'pom.xml'
-                    def nexusUrl = 'nexus:8081'
                     def artifactPath = "target/${pom.artifactId}-${pom.version}.jar"
-                    
+
                     nexusArtifactUploader(
                         nexusVersion: 'nexus3',
                         protocol: 'http',
-                        nexusUrl: nexusUrl,
+                        nexusUrl: env.NEXUS_URL,
                         groupId: pom.groupId,
                         version: pom.version,
                         repository: pom.version.endsWith('SNAPSHOT') ? 'maven-snapshots' : 'maven-releases',
-                        credentialsId: 'nexus-credentials',
+                        credentialsId: env.NEXUS_CREDENTIALS_ID,
                         artifacts: [
                             [artifactId: pom.artifactId,
                              classifier: '',
@@ -72,6 +84,19 @@ pipeline {
                     )
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            echo 'Slack Notification'
+            slackSend channel: env.SLACK_CHANNEL,
+                      color: COLOR_MAP[currentBuild.currentResult],
+                      message: """*${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*
+                                 Branch: ${env.GIT_BRANCH}
+                                 Commit: ${env.GIT_COMMIT}
+                                 Author: ${env.GIT_AUTHOR_NAME}
+                                 More Info at: ${env.BUILD_URL}"""
         }
     }
 }
