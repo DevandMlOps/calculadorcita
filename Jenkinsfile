@@ -87,7 +87,7 @@ pipeline {
         }
     }
 
-    post {
+post {
         always {
             script {
                 def COLOR_MAP = [
@@ -96,14 +96,29 @@ pipeline {
                     'UNSTABLE': 'warning',
                     'ABORTED': 'warning'
                 ]
-                echo 'Slack Notification'
-                slackSend channel: env.SLACK_CHANNEL,
-                          color: COLOR_MAP[currentBuild.currentResult],
-                          message: """*${currentBuild.currentResult}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*
-                                     Branch: ${env.GIT_BRANCH}
-                                     Commit: ${env.GIT_COMMIT}
-                                     Author: ${env.GIT_AUTHOR_NAME}
-                                     More Info at: ${env.BUILD_URL}"""
+                
+                def buildStatus = currentBuild.currentResult
+                def errorMessage = ""
+                
+                if (buildStatus == 'FAILURE') {
+                    errorMessage = currentBuild.rawBuild.getLog(1000).join('\n')
+                    if (errorMessage.length() > 1000) {
+                        errorMessage = errorMessage.take(1000) + "... [mensaje truncado]"
+                    }
+                }
+                
+                echo 'Enviando notificación a Slack'
+                slackSend(
+                    channel: env.SLACK_CHANNEL,
+                    color: COLOR_MAP[buildStatus],
+                    message: """*${buildStatus}: Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}*
+                        Branch: ${env.GIT_BRANCH}
+                        Commit: ${env.GIT_COMMIT}
+                        Author: ${env.GIT_AUTHOR_NAME}
+                        More Info at: ${env.BUILD_URL}
+                        ${buildStatus == 'FAILURE' ? "\nError Details:\n```${errorMessage}```" : ''}
+                    """.stripIndent()
+                )
             }
         }
     }
